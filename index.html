@@ -82,7 +82,7 @@ const cli=id=>S.clientes.find(c=>c.id===id);
 // confirmación en dos toques (sin confirm())
 function two(key,fn,btn,txt){if(armed===key){armed=null;fn();return}armed=key;btn.textContent='¿Seguro? Tocá de nuevo';setTimeout(()=>{if(armed===key){armed=null;btn.textContent=txt}},3000)}
 
-const TABS={reparto:['🚚','#2f7d4f'],clientes:['👥','#2b6cb0'],saldos:['💰','#c26a12'],resumen:['📊','#7c4dbd']};
+const TABS={reparto:['🚚','#c94545'],clientes:['👥','#2b6cb0'],saldos:['💰','#c26a12'],resumen:['📊','#7c4dbd']};
 function navBar(){$('#nav').innerHTML=Object.keys(TABS).map(t=>`<button style="--t:${TABS[t][1]}" class="${t===tab?'on':''}" onclick="tab='${t}';render()">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}
 function render(){navBar();$('#app').innerHTML=({reparto:vReparto,clientes:vPedidos,saldos:vMovs,resumen:vResumen})[tab]()}
 
