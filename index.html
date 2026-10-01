@@ -119,14 +119,14 @@ function abrirForm(id){
   const c=cli(id)||{nombre:'',dir:'',tel:'',cant:1,dias:[1,2,3,4,5],notas:'',activo:true,turnos:['M']};
   const m=$('#modal');m.style.display='block';
   m.innerHTML=`<div class="card"><h2>${id?'Editar':'Nuevo'} cliente</h2>
-  <label>Nombre<input id="f-n" value="${esc(c.nombre)}"></label>
-  <label>Dirección<input id="f-d" value="${esc(c.dir)}"></label>
-  <label>Teléfono<input id="f-t" type="tel" value="${esc(c.tel)}"></label>
-  <label>Viandas por día<input id="f-c" type="number" min="1" value="${c.cant}"></label>
+  <label>Nombre<input id="f-n" maxlength="30" value="${esc(c.nombre)}"></label>
+  <label>Dirección<input id="f-d" maxlength="30" value="${esc(c.dir)}"></label>
+  <label>Teléfono<input id="f-t" type="tel" maxlength="30" value="${esc(c.tel)}"></label>
+  <label>Viandas por día<input id="f-c" type="text" inputmode="numeric" maxlength="2" oninput="this.value=this.value.replace(/\D/g,'')" value="${c.cant}"></label>
   <div>Días</div><div class="chips" id="f-dias">${ORD.map(d=>`<button type="button" class="chip ${c.dias.includes(d)?'on':''}" data-d="${d}" onclick="this.classList.toggle('on')">${DIAS[d]}</button>`).join('')}</div>
   <div>Entrega</div><div class="chips" id="f-tur">${['M','N'].map(t=>`<button type="button" class="chip ${tur(c).includes(t)?'on':''}" data-t="${t}" onclick="this.classList.toggle('on')">${TN[t]}</button>`).join('')}</div>
   <div id="f-err" class="mut" style="color:var(--bad)"></div>
-  <label>Notas<textarea id="f-o" rows="2">${esc(c.notas)}</textarea></label>
+  <label>Notas<input id="f-o" maxlength="30" value="${esc(c.notas)}"></label>
   <label class="row" style="justify-content:flex-start"><input class="chk" id="f-a" type="checkbox" ${c.activo?'checked':''} style="width:26px;margin:0"> Cliente activo</label>
   <div class="row" style="margin-top:12px"><button onclick="cerrar()">Cancelar</button>
   ${id?`<button class="bad" onclick="two('del',()=>{S.clientes=S.clientes.filter(x=>x.id!=='${id}');save();cerrar()},this,'Eliminar')">Eliminar</button>`:''}
