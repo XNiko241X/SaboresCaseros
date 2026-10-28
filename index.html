@@ -5,7 +5,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Sabores Caseros">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#2f7d4f">
+<meta name="theme-color" content="#EEF3EE" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141815" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" href="icon-192.png">
@@ -42,9 +43,11 @@ button:active{transform:scale(.97)}
 .sm{min-height:44px;padding:10px 16px;font-size:14px}
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 14px}
 .chip{flex:1;min-width:52px;min-height:50px;padding:12px 6px;border-radius:999px;color:var(--mut)}
+.dias .chip{flex:1 1 calc((100% - 32px)/5)}
 .chip.on{background:var(--acs);color:var(--ac);border-color:var(--ac)}
 .done{opacity:.5;text-decoration:line-through}
-.wa{flex:none;display:flex;align-items:center;justify-content:center;min-height:48px;padding:0 16px;border-radius:14px;background:#25d366;color:#fff;text-decoration:none;font-size:15px;font-weight:700}
+.wa{flex:none;display:flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;border-radius:12px;background:#25d366;color:#fff;text-decoration:none}.wa svg{width:24px;height:24px;fill:#fff}
+.rep{flex:1;min-width:0;overflow-wrap:anywhere}.rep>div{line-height:1.35}.rep .mut{margin-top:2px}.acc{display:flex;align-items:center;gap:8px;flex:none}
 .cat{cursor:pointer;margin:16px 0 8px;padding:10px 4px;border-bottom:1.5px solid var(--bd);user-select:none}
 .chk{width:34px;height:34px;margin:0;min-height:0;flex:none;accent-color:var(--ac)}
 .tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--card);border-radius:22px;padding:5px;box-shadow:var(--shadow);gap:5px}
@@ -61,6 +64,8 @@ button:active{transform:scale(.97)}
 .hero .v{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:32px;margin-top:4px}
 .dayrow{padding:14px 0;border-bottom:1px solid var(--bd)}
 .dayrow:last-child{border:0}
+.step{display:flex;gap:6px;margin:6px 0 12px}.step button{flex:none;width:44px;min-height:50px;padding:0;font-size:22px;line-height:1;border-radius:12px}.step input{margin:0;flex:1;text-align:center;padding:12px 2px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}.g2>*{min-width:0}.g2 .full{grid-column:1/-1}.g2 input,.g2 select{padding:12px 10px;min-width:0}
 #modal{z-index:20;position:fixed;inset:0;background:rgba(18,26,20,.55);display:none;overflow:auto;padding:12px}
 #modal .card{max-width:520px;margin:20px auto}
 </style></head><body>
@@ -74,6 +79,11 @@ button:active{transform:scale(.97)}
 const DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'],ORD=[1,2,3,4,5,6,0];
 let S={clientes:[],movs:[],hechos:{},cerr:{}};
 try{S=Object.assign(S,JSON.parse(localStorage.getItem('viandas')||'{}'))}catch(e){}
+const normC=c=>{if(c.cantN==null&&c.cantS==null){const t=Math.max(1,+c.cant||1);if(c.tipo==='saludable'){c.cantS=t;c.cantN=0}else{c.cantN=t;c.cantS=0}}c.cantN=Math.max(0,+c.cantN||0);c.cantS=Math.max(0,+c.cantS||0);c.cant=c.cantN+c.cantS;delete c.tipo;return c};
+S.clientes=(S.clientes||[]).map(normC);
+const vTxt=c=>{const t=`${c.cant} vianda${c.cant>1?'s':''}`;
+  if(c.cantS&&c.cantN)return `${t} (${c.cantN} Norm + ${c.cantS} Salu)`;
+  if(c.cantS)return `${t} (${c.cantS} Salu)`;return t};
 const save=()=>{try{localStorage.setItem('viandas',JSON.stringify(S))}catch(e){}};
 let abi={},tab='reparto',dia=new Date().getDay(),q='',armed=null;
 const $=s=>document.querySelector(s);
@@ -125,11 +135,11 @@ function vReparto(){
   const items=e.map(([c,t])=>{
     const k=c.id+'|'+t,d=S.hechos[k];
     const head=t!==last?`<h3>${TN[t]}</h3>`:'';last=t;
-    return head+`<label class="card row" style="cursor:pointer;text-transform:none;letter-spacing:0;font-size:16px;color:var(--tx);font-weight:400"><div class="${d?'done':''}" style="flex:1"><b class="big">${esc(c.nombre)}</b> | ${c.cant} vianda${c.cant>1?'s':''}<div class="mut">${[c.dir,c.tel,c.notas].filter(Boolean).map(esc).join(' | ')}</div></div>
-    ${c.tel&&waLink(c.tel)?`<a class="wa" href="${waLink(c.tel)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">WhatsApp</a>`:''}
-    <input class="chk" type="checkbox" ${d?'checked':''} onchange="tilde('${k}',this.checked)"></label>`}).join('');
+    return head+`<label class="card row" style="cursor:pointer;text-transform:none;letter-spacing:0;font-size:16px;color:var(--tx);font-weight:400"><div class="rep ${d?'done':''}"><div><b class="big">${esc(c.nombre)}</b></div><div class="mut">${vTxt(c)}</div>${c.dir?`<div class="mut">${esc(c.dir)}</div>`:''}${c.tel?`<div class="mut">${esc(c.tel)}</div>`:''}${c.notas?`<div class="mut">${esc(c.notas)}</div>`:''}</div>
+    <div class="acc">${c.tel&&waLink(c.tel)?`<a class="wa" href="${waLink(c.tel)}" target="_blank" rel="noopener" aria-label="WhatsApp" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg></a>`:''}
+    <input class="chk" type="checkbox" ${d?'checked':''} onchange="tilde('${k}',this.checked)"></div></label>`}).join('');
   return `<h2>Reparto</h2>
-  <div class="chips">${ORD.map(d=>`<button class="chip ${d===dia?'on':''}" onclick="dia=${d};render()">${DIAS[d]}</button>`).join('')}</div>
+  <div class="chips dias">${ORD.map(d=>`<button class="chip ${d===dia?'on':''}" onclick="dia=${d};render()">${DIAS[d]}</button>`).join('')}</div>
   <div class="row" style="margin-bottom:6px"><span class="mut">${h} de ${e.length} entregadas</span>
   <button class="sm" onclick="two('reset',()=>{S.hechos={};save();render()},this,'Restablecer lista')">Restablecer lista</button></div>
   ${items||'<div class="card mut" style="text-align:center">No hay viandas para este día.</div>'}`}
@@ -140,32 +150,38 @@ function vPedidos(){
   return `<div class="row"><h2>Clientes (${S.clientes.length})</h2><button class="pri" onclick="abrirForm()">+ Nuevo</button></div>
   <input id="q" placeholder="Buscar cliente…" value="${esc(q)}" oninput="q=this.value;lista()">
   <div id="lista">${itemsP(l)}</div>`}
-function itemC(c){const sd=saldo(c.id);return `<div class="card row" style="cursor:pointer" onclick="abrirForm('${c.id}')"><div style="flex:1"><b class="big">${esc(c.nombre)}</b> | ${c.cant} vianda${c.cant>1?'s':''}<div class="mut">${[esc(c.tel),turTxt(c),c.dias.length?ORD.filter(d=>c.dias.includes(d)).map(d=>DIAS[d]).join(' '):'Sin días'].filter(Boolean).join(' | ')}</div></div><div style="text-align:right"><b class="mono ${sd>0?'pos':sd<0?'neg':''}">${money(sd)}</b><div class="mut">saldo</div></div></div>`}
+function itemC(c){const sd=saldo(c.id);return `<div class="card row" style="cursor:pointer" onclick="abrirForm('${c.id}')"><div style="flex:1"><b class="big">${esc(c.nombre)}</b> | ${vTxt(c)}<div class="mut">${[esc(c.tel),turTxt(c),c.dias.length?ORD.filter(d=>c.dias.includes(d)).map(d=>DIAS[d]).join(' '):'Sin días'].filter(Boolean).join(' | ')}</div></div><div style="text-align:right"><b class="mono ${sd>0?'pos':sd<0?'neg':''}">${money(sd)}</b><div class="mut">saldo</div></div></div>`}
 function itemsP(l){return l.map(itemC).join('')||'<div class="card mut" style="text-align:center">Sin clientes.</div>'}
 function lista(){$('#lista').innerHTML=itemsP(S.clientes.filter(c=>c.nombre.toLowerCase().includes(q.toLowerCase())).sort(byName))}
 
 function abrirForm(id){
-  const c=cli(id)||{nombre:'',dir:'',tel:'',cant:1,dias:[1,2,3,4,5],notas:'',turnos:['M']};
+  const c=cli(id)||{nombre:'',dir:'',tel:'',cantN:1,cantS:0,dias:[1,2,3,4,5],notas:'',turnos:['M']};
   const m=$('#modal');m.style.display='block';
   m.innerHTML=`<div class="card"><h2>${id?'Editar':'Nuevo'} cliente</h2>
+  <div class="g2">
   <label>Nombre<input id="f-n" maxlength="30" value="${esc(c.nombre)}"></label>
   <label>Dirección<input id="f-d" maxlength="30" value="${esc(c.dir)}"></label>
-  <label>Teléfono<input id="f-t" type="tel" maxlength="30" value="${esc(c.tel)}"></label>
-  <label>Viandas por día<input id="f-c" type="text" inputmode="numeric" maxlength="2" oninput="this.value=this.value.replace(/\D/g,'')" value="${c.cant}"></label>
-  <label>Días</label><div class="chips" id="f-dias">${ORD.map(d=>`<button type="button" class="chip ${c.dias.includes(d)?'on':''}" data-d="${d}" onclick="this.classList.toggle('on')">${DIAS[d]}</button>`).join('')}</div>
+  <label class="full">Teléfono<input id="f-t" type="tel" maxlength="30" value="${esc(c.tel)}"></label>
+  <div><label>Normales</label><div class="step"><button type="button" onclick="stp('f-cn',-1)">−</button><input id="f-cn" type="text" inputmode="numeric" maxlength="2" oninput="this.value=this.value.replace(/\D/g,'')" value="${c.cantN}"><button type="button" onclick="stp('f-cn',1)">+</button></div></div>
+  <div><label>Saludables</label><div class="step"><button type="button" onclick="stp('f-cs',-1)">−</button><input id="f-cs" type="text" inputmode="numeric" maxlength="2" oninput="this.value=this.value.replace(/\D/g,'')" value="${c.cantS}"><button type="button" onclick="stp('f-cs',1)">+</button></div></div>
+  </div>
+  <label>Días</label><div class="chips dias" id="f-dias">${ORD.map(d=>`<button type="button" class="chip ${c.dias.includes(d)?'on':''}" data-d="${d}" onclick="this.classList.toggle('on')">${DIAS[d]}</button>`).join('')}</div>
   <label>Entrega</label><div class="chips" id="f-tur">${['M','N'].map(t=>`<button type="button" class="chip ${tur(c).includes(t)?'on':''}" data-t="${t}" onclick="this.classList.toggle('on')">${TN[t]}</button>`).join('')}</div>
   <div id="f-err" class="mut" style="color:var(--bad)"></div>
   <label>Notas<input id="f-o" maxlength="30" value="${esc(c.notas)}"></label>
   <div class="row" style="margin-top:12px"><button style="flex:1" onclick="cerrar()">Cancelar</button>
   ${id?`<button class="bad" style="flex:1" onclick="two('del',()=>{S.clientes=S.clientes.filter(x=>x.id!=='${id}');save();cerrar()},this,'Eliminar')">Eliminar</button>`:''}
   <button class="pri" style="flex:1" onclick="guardar('${id||''}')">Guardar</button></div></div>`}
+function stp(id,d){const el=$('#'+id);el.value=Math.min(99,Math.max(0,(+el.value||0)+d))}
 function guardar(id){
   const n=$('#f-n').value.trim();if(!n){$('#f-n').focus();return}
   const norm=x=>x.trim().toLowerCase().replace(/\s+/g,' ');
   if(S.clientes.some(x=>x.id!==id&&norm(x.nombre)===norm(n))){$('#f-err').textContent='Ya existe un cliente con ese nombre.';$('#f-n').focus();return}
   const tu=[...document.querySelectorAll('#f-tur .on')].map(b=>b.dataset.t);
   if(!tu.length){$('#f-err').textContent='Elegí Mediodía, Noche o los dos.';return}
-  const o={id:id||uid(),nombre:n,dir:$('#f-d').value.trim(),tel:$('#f-t').value.trim(),cant:Math.max(1,+$('#f-c').value||1),
+  const cn=+$('#f-cn').value||0,cs=+$('#f-cs').value||0;
+  if(cn+cs<1){$('#f-err').textContent='Poné al menos 1 vianda (normal o saludable).';return}
+  const o={id:id||uid(),nombre:n,dir:$('#f-d').value.trim(),tel:$('#f-t').value.trim(),cantN:cn,cantS:cs,cant:cn+cs,
    dias:[...document.querySelectorAll('#f-dias .on')].map(b=>+b.dataset.d),turnos:tu,notas:$('#f-o').value.trim()};
   const i=S.clientes.findIndex(x=>x.id===id);if(i>=0)S.clientes[i]=o;else S.clientes.push(o);
   save();cerrar()}
@@ -180,7 +196,7 @@ function vMovs(){
   const info=it=>'Saldo '+money(it.reduce((a,m)=>a+(m.t==='cargo'?m.m:-m.m),0));
   const tot=S.clientes.reduce((a,c)=>a+saldo(c.id),0);
   return `<div class="row"><h2>Saldos</h2><button class="pri" onclick="abrirMov()">+ Nuevo</button></div>
-  <div class="hero" style="background:#c26a12"><div class="l">Saldo total a cobrar</div><div class="v">${money(tot)}</div></div>`+(agrupar(l,m=>cli(m.c)?.nombre||'(eliminado)','saldos',info,item)||'<div class="card mut" style="text-align:center">Sin movimientos.</div>')}
+  <div class="hero" style="background:#c26a12;margin-top:16px"><div class="l">Saldo total a cobrar</div><div class="v">${money(tot)}</div></div>`+(agrupar(l,m=>cli(m.c)?.nombre||'(eliminado)','saldos',info,item)||'<div class="card mut" style="text-align:center">Sin movimientos.</div>')}
 function abrirMov(id){
   const e=id?S.movs.find(x=>x.id===id):null;
   const m=$('#modal');m.style.display='block';
@@ -189,10 +205,12 @@ function abrirMov(id){
   <label>Cliente<input id="m-q" autocomplete="off" placeholder="Escribí 2 o 3 letras del nombre…" value="${e&&cli(e.c)?esc(cli(e.c).nombre):''}" oninput="filtCli(true)" onfocus="this.select();filtCli()"></label>
   <input type="hidden" id="m-c" value="${e?e.c:''}">
   <div id="m-l" style="max-height:200px;overflow:auto;margin:-6px 0 10px"></div>
+  <div class="g2">
   <label>Tipo<select id="m-t"><option value="cargo" ${e&&e.t==='cargo'?'selected':''}>Debe</option><option value="pago" ${e&&e.t==='pago'?'selected':''}>Pagó</option></select></label>
   <label>Fecha<input id="m-f" type="date" value="${e?e.f:hoy()}"></label>
   <label>Monto<input id="m-m" type="text" inputmode="numeric" autocomplete="off" oninput="fmtMonto(this)" value="${e?Math.round(e.m).toLocaleString('es-AR'):''}"></label>
   <label>Nota<input id="m-n" placeholder="Opcional" value="${e?esc(e.n||''):''}"></label>
+  </div>
   <div class="row" style="margin-top:12px"><button style="flex:1" onclick="cerrar()">Cancelar</button><button class="pri" style="flex:1" onclick="addMov('${id||''}')">Guardar</button></div></div>`;
   if(!e)$('#m-q').focus()}
 const nz=x=>x.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -218,12 +236,12 @@ function addMov(id){
 
 function vResumen(){
   const act=S.clientes;
-  const por=ORD.map(d=>[d,act.filter(c=>c.dias.includes(d)).reduce((a,c)=>a+c.cant,0)]);
+  const por=ORD.map(d=>{const l=act.filter(c=>c.dias.includes(d));return [d,l.reduce((a,c)=>a+c.cant,0),l.reduce((a,c)=>a+c.cantN,0),l.reduce((a,c)=>a+c.cantS,0)]});
   const tot=por.reduce((a,x)=>a+x[1],0);
   return `<h2>Resumen</h2>
   <div class="hero" style="background:#7c4dbd"><div class="l">Viandas por semana</div><div class="v">${tot}</div></div>
   <h3>Viandas por día</h3>
-  <div class="card">${por.map(([d,n])=>`<div class="row dayrow"><span class="big">${DIAS[d]}</span><b class="mono big">${n}</b></div>`).join('')}</div>`}
+  <div class="card">${por.map(([d,n,nn,ns])=>`<div class="row dayrow"><div><span class="big">${DIAS[d]}</span>${ns?`<div class="mut">${nn} Norm + ${ns} Salu</div>`:''}</div><b class="mono big">${n}</b></div>`).join('')}</div>`}
 render();
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script></body></html>
