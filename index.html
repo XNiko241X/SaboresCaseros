@@ -77,10 +77,11 @@ button:active{transform:scale(.97)}
 <div id="modal"></div>
 <script>
 const DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'],ORD=[1,2,3,4,5,6,0];
-let S={clientes:[],movs:[],hechos:{},cerr:{}};
+let S={clientes:[],movs:[],hechos:{},cerr:{},precios:{n:0,s:0}};
 try{S=Object.assign(S,JSON.parse(localStorage.getItem('viandas')||'{}'))}catch(e){}
 const normC=c=>{if(c.cantN==null&&c.cantS==null){const t=Math.max(1,+c.cant||1);if(c.tipo==='saludable'){c.cantS=t;c.cantN=0}else{c.cantN=t;c.cantS=0}}c.cantN=Math.max(0,+c.cantN||0);c.cantS=Math.max(0,+c.cantS||0);c.cant=c.cantN+c.cantS;delete c.tipo;return c};
 S.clientes=(S.clientes||[]).map(normC);
+S.precios=Object.assign({n:0,s:0},S.precios);
 const vTxt=c=>{const t=`${c.cant} vianda${c.cant>1?'s':''}`;
   if(c.cantS&&c.cantN)return `${t} (${c.cantN} Norm + ${c.cantS} Salu)`;
   if(c.cantS)return `${t} (${c.cantS} Salu)`;return t};
@@ -143,7 +144,28 @@ function vReparto(){
   <div class="row" style="margin-bottom:6px"><span class="mut">${h} de ${e.length} entregadas</span>
   <button class="sm" onclick="two('reset',()=>{S.hechos={};save();render()},this,'Restablecer lista')">Restablecer lista</button></div>
   ${items||'<div class="card mut" style="text-align:center">No hay viandas para este día.</div>'}`}
-function tilde(id,v){if(v)S.hechos[id]=1;else delete S.hechos[id];save();render()}
+function tilde(k,v){
+  if(v)S.hechos[k]=1;else delete S.hechos[k];save();render();
+  const [cid,t]=k.split('|'),c=cli(cid);if(!c)return;
+  const ex=S.movs.find(x=>x.r===k&&x.f===hoy());
+  if(v){if(!ex)abrirMov('',{c:cid,m:c.cantN*S.precios.n+c.cantS*S.precios.s,n:'Entrega '+TN[t],r:k})}
+  else if(ex)abrirBorrar(ex.id)}
+function abrirBorrar(id){
+  const x=S.movs.find(m=>m.id===id);if(!x)return;
+  const m=$('#modal');m.style.display='block';
+  m.innerHTML=`<div class="card"><h2>¿Borrar el cargo?</h2><p>Destildaste la entrega de ${esc(cli(x.c)?.nombre||'')}. Tiene un cargo de ${money(x.m)} cargado hoy.</p>
+  <div class="row"><button style="flex:1" onclick="cerrar()">Dejarlo</button><button class="bad" style="flex:1" onclick="S.movs=S.movs.filter(y=>y.id!=='${id}');save();cerrar()">Borrar cargo</button></div></div>`}
+function abrirPrecios(){
+  const m=$('#modal');m.style.display='block';
+  m.innerHTML=`<div class="card"><h2>Precios por vianda</h2>
+  <div class="g2">
+  <label>Normal<input id="p-n" type="text" inputmode="numeric" autocomplete="off" oninput="fmtMonto(this)" value="${S.precios.n?S.precios.n.toLocaleString('es-AR'):''}"></label>
+  <label>Saludable<input id="p-s" type="text" inputmode="numeric" autocomplete="off" oninput="fmtMonto(this)" value="${S.precios.s?S.precios.s.toLocaleString('es-AR'):''}"></label>
+  </div>
+  <div class="mut">Se usan para calcular el cargo al tildar una entrega.</div>
+  <div class="row" style="margin-top:12px"><button style="flex:1" onclick="cerrar()">Cancelar</button><button class="pri" style="flex:1" onclick="guardarPrecios()">Guardar</button></div></div>`}
+function guardarPrecios(){
+  S.precios={n:+$('#p-n').value.replace(/\D/g,'')||0,s:+$('#p-s').value.replace(/\D/g,'')||0};save();cerrar()}
 
 function vPedidos(){
   const l=S.clientes.filter(c=>c.nombre.toLowerCase().includes(q.toLowerCase())).sort(byName);
@@ -197,22 +219,22 @@ function vMovs(){
   const tot=S.clientes.reduce((a,c)=>a+saldo(c.id),0);
   return `<div class="row"><h2>Saldos</h2><button class="pri" onclick="abrirMov()">+ Nuevo</button></div>
   <div class="hero" style="background:#c26a12;margin-top:16px"><div class="l">Saldo total a cobrar</div><div class="v">${money(tot)}</div></div>`+(agrupar(l,m=>cli(m.c)?.nombre||'(eliminado)','saldos',info,item)||'<div class="card mut" style="text-align:center">Sin movimientos.</div>')}
-function abrirMov(id){
+function abrirMov(id,p){
   const e=id?S.movs.find(x=>x.id===id):null;
   const m=$('#modal');m.style.display='block';
   if(!S.clientes.length){m.innerHTML=`<div class="card"><p>Primero cargá un cliente en la pestaña Clientes.</p><button onclick="cerrar()">Cerrar</button></div>`;return}
   m.innerHTML=`<div class="card"><h2>${e?'Editar':'Nuevo'} movimiento</h2>
-  <label>Cliente<input id="m-q" autocomplete="off" placeholder="Escribí 2 o 3 letras del nombre…" value="${e&&cli(e.c)?esc(cli(e.c).nombre):''}" oninput="filtCli(true)" onfocus="this.select();filtCli()"></label>
-  <input type="hidden" id="m-c" value="${e?e.c:''}">
+  <label>Cliente<input id="m-q" autocomplete="off" placeholder="Escribí 2 o 3 letras del nombre…" value="${e&&cli(e.c)?esc(cli(e.c).nombre):p&&cli(p.c)?esc(cli(p.c).nombre):''}" oninput="filtCli(true)" onfocus="this.select();filtCli()"></label>
+  <input type="hidden" id="m-c" value="${e?e.c:p?p.c:''}"><input type="hidden" id="m-r" value="${esc(e?e.r||'':p?p.r:'')}">
   <div id="m-l" style="max-height:200px;overflow:auto;margin:-6px 0 10px"></div>
   <div class="g2">
   <label>Tipo<select id="m-t"><option value="cargo" ${e&&e.t==='cargo'?'selected':''}>Debe</option><option value="pago" ${e&&e.t==='pago'?'selected':''}>Pagó</option></select></label>
   <label>Fecha<input id="m-f" type="date" value="${e?e.f:hoy()}"></label>
-  <label>Monto<input id="m-m" type="text" inputmode="numeric" autocomplete="off" oninput="fmtMonto(this)" value="${e?Math.round(e.m).toLocaleString('es-AR'):''}"></label>
-  <label>Nota<input id="m-n" placeholder="Opcional" value="${e?esc(e.n||''):''}"></label>
+  <label>Monto<input id="m-m" type="text" inputmode="numeric" autocomplete="off" oninput="fmtMonto(this)" value="${e?Math.round(e.m).toLocaleString('es-AR'):p&&p.m>0?Math.round(p.m).toLocaleString('es-AR'):''}"></label>
+  <label>Nota<input id="m-n" placeholder="Opcional" value="${e?esc(e.n||''):p?esc(p.n||''):''}"></label>
   </div>
-  <div class="row" style="margin-top:12px"><button style="flex:1" onclick="cerrar()">Cancelar</button><button class="pri" style="flex:1" onclick="addMov('${id||''}')">Guardar</button></div></div>`;
-  if(!e)$('#m-q').focus()}
+  <div class="row" style="margin-top:12px"><button style="flex:1" onclick="cerrar()">${p?'Omitir':'Cancelar'}</button><button class="pri" style="flex:1" onclick="addMov('${id||''}')">Guardar</button></div></div>`;
+  if(p){$('#m-m').focus();$('#m-m').select()}else if(!e)$('#m-q').focus()}
 const nz=x=>x.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 function filtCli(typing){
   const t=nz($('#m-q').value.trim()),h=$('#m-c');
@@ -231,7 +253,7 @@ function fmtMonto(el){
   try{el.setSelectionRange(i,i)}catch(e){}}
 function addMov(id){
   const m=+$('#m-m').value.replace(/\D/g,''),c=$('#m-c').value;if(!c){$('#m-q').focus();return}if(!m||m<=0){$('#m-m').focus();return}
-  const o={id:id||uid(),c,t:$('#m-t').value,m,n:$('#m-n').value.trim(),f:$('#m-f').value||hoy()};
+  const o={id:id||uid(),c,t:$('#m-t').value,m,n:$('#m-n').value.trim(),f:$('#m-f').value||hoy(),r:$('#m-r').value||undefined};
   const i=id?S.movs.findIndex(x=>x.id===id):-1;if(i>=0)S.movs[i]=o;else S.movs.push(o);save();cerrar()}
 
 function vResumen(){
@@ -240,6 +262,10 @@ function vResumen(){
   const tot=por.reduce((a,x)=>a+x[1],0);
   return `<h2>Resumen</h2>
   <div class="hero" style="background:#7c4dbd"><div class="l">Viandas por semana</div><div class="v">${tot}</div></div>
+  <h3>Precios por vianda</h3>
+  <div class="card"><div class="row dayrow"><span class="big">Normal</span><b class="mono big">${money(S.precios.n)}</b></div>
+  <div class="row dayrow"><span class="big">Saludable</span><b class="mono big">${money(S.precios.s)}</b></div>
+  <button class="sm" style="width:100%;margin-top:12px" onclick="abrirPrecios()">Editar precios</button></div>
   <h3>Viandas por día</h3>
   <div class="card">${por.map(([d,n,nn,ns])=>`<div class="row dayrow"><div><span class="big">${DIAS[d]}</span>${ns?`<div class="mut">${nn} Norm + ${ns} Salu</div>`:''}</div><b class="mono big">${n}</b></div>`).join('')}</div>`}
 render();
